@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Chat</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #ffe0b2;
+  --card: #ffffff;
+  --accent: #ff5e5e;
+  --accent-dark: #e04040;
+  --accent-light: #fff0f0;
+  --text: #2d2d2d;
+  --sub: #888;
+  --border: #f0d0d0;
+  --shadow: 0 4px 20px rgba(255,94,94,0.13);
+  --radius: 14px;
+}
+
+body {
+  font-family: 'Nunito', sans-serif;
+  background: var(--bg);
+  min-height: 100vh;
+  padding: 18px 0 90px;
+}
+
+/* ── Search bar ── */
+.search-wrap {
+  width: 340px;
+  margin: 0 auto 10px;
+  position: relative;
+}
+.search-wrap input {
+  width: 100%;
+  padding: 10px 16px 10px 38px;
+  border-radius: 30px;
+  border: 2px solid var(--border);
+  background: var(--card);
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--text);
+  outline: none;
+  transition: border .2s;
+}
+.search-wrap input:focus { border-color: var(--accent); }
+.search-wrap .search-icon {
+  position: absolute;
+  left: 12px; top: 50%;
+  transform: translateY(-50%);
+  font-size: 15px; color: var(--sub);
+  pointer-events: none;
+}
+
+/* ── Chat container ── */
+.chat-container {
+  width: 340px;
+  max-height: 82vh;
+  background: var(--card);
+  padding: 12px;
+  border-radius: var(--radius);
+  overflow-y: auto;
+  scrollbar-width: none;
+  box-shadow: var(--shadow);
+  margin: 0 auto;
+}
+
+/* ── Chat item ── */
+.chat-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--accent-light);
+  padding: 10px 12px;
+  border-radius: 12px;
+  margin: 7px 0;
+  border: 1.5px solid var(--border);
+  transition: box-shadow .18s, transform .15s;
+  animation: slideIn .25s ease both;
+}
+@keyframes slideIn {
+  from { opacity:0; transform: translateY(8px); }
+  to   { opacity:1; transform: translateY(0); }
+}
+.chat-item:hover { box-shadow: 0 3px 12px rgba(255,94,94,.18); transform: translateY(-1px); }
+
+.left { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+.user-img { width: 42px; height: 42px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent); flex-shrink: 0; }
+
+.chat-text { flex: 1; min-width: 0; }
+.name { font-weight: 800; font-size: 14px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.message { font-size: 13px; color: var(--sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.meta { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex-shrink: 0; margin-left: 8px; }
+.time { font-size: 11px; color: var(--sub); white-space: nowrap; }
+
+.actions { display: flex; gap: 4px; }
+.btn-icon {
+  width: 26px; height: 26px;
+  border-radius: 7px; border: none; cursor: pointer;
+  display: flex; justify-content: center; align-items: center;
+  font-size: 13px; transition: background .15s, transform .12s;
+}
+.btn-icon:active { transform: scale(.9); }
+.btn-edit  { background: #fff3cd; color: #b8860b; }
+.btn-edit:hover  { background: #ffe08a; }
+.btn-del   { background: #fde8e8; color: var(--accent); }
+.btn-del:hover   { background: #ffbdbd; }
+
+/* ── Empty state ── */
+.empty-state {
+  text-align: center; padding: 40px 20px;
+  color: var(--sub); font-size: 14px; display: none;
+}
+.empty-state .icon { font-size: 36px; margin-bottom: 8px; }
+
+/* ── FAB ── */
+.fab {
+  position: fixed; bottom: 24px; right: 20px;
+  width: 54px; height: 54px;
+  background: var(--accent); color: white;
+  border-radius: 50%;
+  display: flex; justify-content: center; align-items: center;
+  font-size: 28px; cursor: pointer;
+  box-shadow: 0 4px 16px rgba(255,94,94,.45);
+  transition: background .2s, transform .15s;
+  user-select: none;
+  z-index: 100;
+}
+.fab:hover { background: var(--accent-dark); transform: rotate(45deg) scale(1.07); }
+
+/* ── Floating form ── */
+.chat-form {
+  position: fixed; bottom: 90px;
+  right: 20px;
+  width: 320px;
+  background: var(--card);
+  padding: 18px;
+  border-radius: var(--radius);
+  box-shadow: 0 8px 30px rgba(0,0,0,.18);
+  display: none;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 200;
+  animation: popUp .2s ease both;
+}
+@keyframes popUp {
+  from { opacity:0; transform: translateY(10px); }
+  to   { opacity:1; transform: translateY(0); }
+}
+
+.form-title { font-weight: 800; font-size: 16px; color: var(--text); }
+.form-title span { color: var(--accent); }
+
+.field { display: flex; flex-direction: column; gap: 3px; }
+
+.chat-form input,
+.chat-form select {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1.8px solid var(--border);
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--text);
+  outline: none;
+  transition: border .2s;
+}
+.chat-form input:focus,
+.chat-form select:focus { border-color: var(--accent); }
+.chat-form input.error,
+.chat-form select.error { border-color: #e74c3c; background: #fff5f5; }
+
+.error-msg { font-size: 11.5px; color: #e74c3c; min-height: 14px; }
+
+.chat-form button.submit {
+  padding: 9px;
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  font-family: inherit;
+  font-weight: 800;
+  font-size: 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background .2s;
+  margin-top: 2px;
+}
+.chat-form button.submit:hover { background: var(--accent-dark); }
+
+/* ── Edit modal overlay ── */
+.modal-overlay {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.35);
+  z-index: 300;
+  justify-content: center; align-items: center;
+}
+.modal-overlay.show { display: flex; }
+
+.modal {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 22px;
+  width: 290px;
+  box-shadow: 0 8px 30px rgba(0,0,0,.2);
+  display: flex; flex-direction: column; gap: 12px;
+  animation: popUp .2s ease both;
+}
+.modal-title { font-weight: 800; font-size: 16px; color: var(--text); }
+.modal-title span { color: var(--accent); }
+
+.modal input {
+  padding: 9px 11px;
+  border-radius: 8px;
+  border: 1.8px solid var(--border);
+  font-family: inherit; font-size: 14px; color: var(--text);
+  outline: none; transition: border .2s; width: 100%;
+}
+.modal input:focus { border-color: var(--accent); }
+.modal input.error { border-color: #e74c3c; background: #fff5f5; }
+
+.modal-btns { display: flex; gap: 8px; }
+.modal-btns button {
+  flex: 1; padding: 9px; border: none; border-radius: 8px;
+  font-family: inherit; font-weight: 700; font-size: 13px; cursor: pointer;
+  transition: background .15s;
+}
+.btn-save   { background: var(--accent); color: #fff; }
+.btn-save:hover   { background: var(--accent-dark); }
+.btn-cancel { background: #f0f0f0; color: var(--text); }
+.btn-cancel:hover { background: #e0e0e0; }
+</style>
+</head>
+<body>
+
+<div class="search-wrap">
+  <span class="search-icon">🔍</span>
+  <input type="text" id="searchInput" placeholder="Search by name…" oninput="renderChats()">
+</div>
+
+<div class="chat-container" id="chat">
+  <div class="empty-state" id="emptyState">
+    <div class="icon">💬</div>
+    No chats found.
+  </div>
+</div>
+
+<!-- FAB -->
+<div class="fab" id="fab" onclick="toggleForm()" title="New chat">+</div>
+
+<!-- Add / form -->
+<div class="chat-form" id="chatForm">
+  <div class="form-title">New <span>Chat</span></div>
+
+  <div class="field">
+    <input type="text" id="name" placeholder="Name" oninput="clearErr('name')">
+    <span class="error-msg" id="err-name"></span>
+  </div>
+  <div class="field">
+    <input type="text" id="message" placeholder="Message" oninput="clearErr('message')">
+    <span class="error-msg" id="err-message"></span>
+  </div>
+  <div class="field">
+    <input type="time" id="time" oninput="clearErr('time')">
+    <span class="error-msg" id="err-time"></span>
+  </div>
+  <div class="field">
+    <select id="gender" onchange="clearErr('gender')">
+      <option value="">Select Gender</option>
+      <option value="M">Male</option>
+      <option value="F">Female</option>
+    </select>
+    <span class="error-msg" id="err-gender"></span>
+  </div>
+
+  <button class="submit" onclick="addChat()">Add Chat</button>
+</div>
+
+<!-- Edit modal -->
+<div class="modal-overlay" id="editOverlay" onclick="closeEditOnOverlay(event)">
+  <div class="modal">
+    <div class="modal-title">Edit <span>Name</span></div>
+    <div class="field">
+      <input type="text" id="editName" placeholder="New name" oninput="clearEditErr()">
+      <span class="error-msg" id="err-editName"></span>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeEdit()">Cancel</button>
+      <button class="btn-save"   onclick="saveEdit()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ── Data ── */
+let chats = [
+  {name:"Ali",    message:"Hey! How are you?",     time:"10:30 AM", gender:"M"},
+  {name:"Sana",   message:"Let's catch up soon 😊", time:"12:30 PM", gender:"F"},
+  {name:"Zaroon", message:"Check this out!",        time:"09:30 AM", gender:"M"},
+  {name:"Hina",   message:"Sounds great!",          time:"02:15 PM", gender:"F"},
+  {name:"Bilal",  message:"On my way…",             time:"11:00 AM", gender:"M"},
+];
+
+let editIndex = -1;
+
+/* ── Sanitize ── */
+function escape(str) {
+  return String(str)
+    .replace(/&/g,"&amp;")
+    .replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;")
+    .replace(/'/g,"&#039;");
+}
+
+/* ── Avatar ── */
+function avatar(gender) {
+  return gender === "M"
+    ? "https://www.svgrepo.com/show/384670/account-avatar-profile-user.svg"
+    : "https://img.freepik.com/premium-vector/female-user-profile-avatar-is-woman-character-screen-saver-with-emotions_505620-617.jpg";
+}
+
+/* ── Render ── */
+function renderChats(scrollToBottom = false) {
+  const query = document.getElementById("searchInput").value.trim().toLowerCase();
+  const container = document.getElementById("chat");
+  const empty = document.getElementById("emptyState");
+
+  const filtered = chats
+    .map((c, i) => ({...c, origIndex: i}))
+    .filter(c => !query || c.name.toLowerCase().includes(query));
+
+  container.innerHTML = "";
+  container.appendChild(empty);           // keep empty-state node
+
+  if (filtered.length === 0) {
+    empty.style.display = "block";
+  } else {
+    empty.style.display = "none";
+    filtered.forEach(({name, message, time, gender, origIndex}) => {
+      const div = document.createElement("div");
+      div.className = "chat-item";
+      div.innerHTML = `
+        <div class="left">
+          <img src="${avatar(gender)}" class="user-img" alt="${escape(name)}">
+          <div class="chat-text">
+            <div class="name">${escape(name)}</div>
+            <div class="message">${escape(message)}</div>
+          </div>
+        </div>
+        <div class="meta">
+          <div class="time">${escape(time)}</div>
+          <div class="actions">
+            <button class="btn-icon btn-edit"  title="Edit name"   onclick="openEdit(${origIndex})">✏️</button>
+            <button class="btn-icon btn-del"   title="Delete chat" onclick="deleteChat(${origIndex})">🗑️</button>
+          </div>
+        </div>`;
+      container.appendChild(div);
+    });
+  }
+
+  if (scrollToBottom) container.scrollTop = container.scrollHeight;
+}
+
+renderChats();
+
+/* ── Toggle form ── */
+const chatForm = document.getElementById("chatForm");
+const fab = document.getElementById("fab");
+function toggleForm() {
+  const open = chatForm.style.display === "flex";
+  chatForm.style.display = open ? "none" : "flex";
+  fab.textContent = open ? "+" : "×";
+}
+
+/* ── Validation helpers ── */
+function setErr(id, msg) {
+  document.getElementById(id).classList.add("error");
+  document.getElementById("err-" + id).textContent = msg;
+}
+function clearErr(id) {
+  document.getElementById(id).classList.remove("error");
+  document.getElementById("err-" + id).textContent = "";
+}
+function validateAdd() {
+  let ok = true;
+  const name    = document.getElementById("name").value.trim();
+  const message = document.getElementById("message").value.trim();
+  const time    = document.getElementById("time").value;
+  const gender  = document.getElementById("gender").value;
+
+  if (!name)    { setErr("name",    "Name is required.");    ok = false; }
+  else if (name.length > 40) { setErr("name", "Max 40 characters."); ok = false; }
+
+  if (!message) { setErr("message", "Message is required."); ok = false; }
+  else if (message.length > 120) { setErr("message","Max 120 characters."); ok = false; }
+
+  if (!time)    { setErr("time",    "Please pick a time.");  ok = false; }
+  if (!gender)  { setErr("gender",  "Select a gender.");     ok = false; }
+  return ok;
+}
+
+/* ── Add chat ── */
+function addChat() {
+  if (!validateAdd()) return;
+
+  const name    = document.getElementById("name").value.trim();
+  const message = document.getElementById("message").value.trim();
+  const gender  = document.getElementById("gender").value;
+  const raw     = document.getElementById("time").value;        // "HH:MM"
+
+  let [h, m] = raw.split(":").map(Number);
+  const suffix = h >= 12 ? "PM" : "AM";
+  h = h % 12 || 12;
+  const formattedTime = `${h}:${String(m).padStart(2,"0")} ${suffix}`;
+
+  chats.push({name, message, time: formattedTime, gender});
+  renderChats(true);
+
+  ["name","message","time","gender"].forEach(id => {
+    document.getElementById(id).value = "";
+    clearErr(id);
+  });
+  chatForm.style.display = "none";
+  fab.textContent = "+";
+}
+
+/* ── Delete chat ── */
+function deleteChat(index) {
+  chats.splice(index, 1);
+  renderChats();
+}
+
+/* ── Edit name ── */
+function openEdit(index) {
+  editIndex = index;
+  document.getElementById("editName").value = chats[index].name;
+  document.getElementById("editName").classList.remove("error");
+  document.getElementById("err-editName").textContent = "";
+  document.getElementById("editOverlay").classList.add("show");
+}
+function closeEdit() {
+  editIndex = -1;
+  document.getElementById("editOverlay").classList.remove("show");
+}
+function closeEditOnOverlay(e) {
+  if (e.target === document.getElementById("editOverlay")) closeEdit();
+}
+function clearEditErr() {
+  document.getElementById("editName").classList.remove("error");
+  document.getElementById("err-editName").textContent = "";
+}
+function saveEdit() {
+  const val = document.getElementById("editName").value.trim();
+  if (!val) {
+    document.getElementById("editName").classList.add("error");
+    document.getElementById("err-editName").textContent = "Name cannot be empty.";
+    return;
+  }
+  if (val.length > 40) {
+    document.getElementById("editName").classList.add("error");
+    document.getElementById("err-editName").textContent = "Max 40 characters.";
+    return;
+  }
+  chats[editIndex].name = val;
+  closeEdit();
+  renderChats();
+}
+
+/* ── Close form when clicking outside ── */
+document.addEventListener("click", e => {
+  if (chatForm.style.display === "flex"
+      && !chatForm.contains(e.target)
+      && !document.getElementById("fab").contains(e.target)) {
+    chatForm.style.display = "none";
+    fab.textContent = "+";
+  }
+});
+</script>
+</body>
+</html>
