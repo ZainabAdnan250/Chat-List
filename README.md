@@ -54,11 +54,8 @@ Errors appear as red text beneath each field and clear as soon as the user start
 
 ---
 
-
-
-##    License
-  MIT — free to use, modify, and distribute.
----
+## License
+MIT- free to use modify and distribute.
 
 ## 📌 Live Preview 
 
